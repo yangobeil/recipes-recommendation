@@ -9,18 +9,21 @@
 ## Google cloud components
 
 - GAR used to store the docker images
+- service account to schedule scraping job
+- cloud scheduler to schedule scraping job
+- cloud run to run scraping job
 
 ## Scraping
 
 Since some requirements (like tensorflow) are heavy the image build is done in two steps. First we build the base image that contains only the python requirements. This is done with the command
 ```
-docker build . -t base_image
+docker build scraping -t base_image
 ```
 Then any image can be built by starting with this one. This saves a lot of development time for when we change the code and not the dependencies.
 
 To build the image run
 ```
-docker build scraping -t scraping
+docker build scraping/script -t scraping
 ```
 To run it locally to test run
 ```
@@ -45,4 +48,4 @@ Info about using selenium in docker: https://dev.to/googlecloud/using-headless-c
 Place to check to know what version of chrome is installed: https://www.ubuntuupdates.org/package/google_chrome/stable/main/base/google-chrome-stable
 (the version of chromedriver-binary must be the same)
 
-gcloud auth configure-docker us-east4-docker.pkg.dev
+Schedule docker container on cloud run: https://cloud.google.com/run/docs/triggering/using-scheduler
