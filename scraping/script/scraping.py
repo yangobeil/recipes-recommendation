@@ -123,7 +123,7 @@ def main():
     recipes_in_db = [item['number'] for item in collection.find({}, {'number': 1})]
 
     results = []
-    for i in range(1, 2):
+    for i in range(1, 4):
         url = f"https://www.ricardocuisine.com/recherche?sort=score&searchValue=&content-type=recipe&currentPage={i}"
 
         recipes = get_recipes_list(url, recipes_in_db)
