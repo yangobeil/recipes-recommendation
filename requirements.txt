@@ -1,0 +1,10 @@
+beautifulsoup4==4.6.3
+chromedriver-binary==98.0.4758.80
+dnspython==1.16.0
+lxml==4.7.1
+numpy==1.21.5
+pymongo==3.10.1
+requests==2.27.1
+selenium==4.1.0
+tensorflow-hub==0.12.0
+tensorflow-text==2.8.1

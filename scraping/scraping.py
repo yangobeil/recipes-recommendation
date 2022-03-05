@@ -1,13 +1,25 @@
+import os
 import re
 
 from bs4 import BeautifulSoup
 import chromedriver_binary
 import numpy as np
+from pymongo import MongoClient
 import requests
 from selenium import webdriver
 import tensorflow_hub as hub
 import tensorflow_text
 
+
+MONGO_USERNAME = os.getenv('MONGO_USERNAME')
+MONGO_PASSWORD = os.getenv('MONGO_PASSWORD')
+
+# connect to mongoDB
+host = f'mongodb+srv://{MONGO_USERNAME}:{MONGO_PASSWORD}@recipes-3neas.mongodb.net/Ricardo?retryWrites=true&w=majority'
+client = MongoClient(host=host)
+db = client.Ricardo
+collection = db.recommendations
+print("Connected to mongoDB")
 
 # setup selenium
 chrome_options = webdriver.ChromeOptions()
@@ -18,6 +30,7 @@ chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--disable-dev-shm-usage")
 
 browser = webdriver.Chrome(options=chrome_options)
+
 
 # setup universal sentence encoder
 embed = hub.load("https://tfhub.dev/google/universal-sentence-encoder-multilingual-large/3")
@@ -32,16 +45,18 @@ def find_max_page():
     return int(num)
 
 
-def get_recipes_list(url):
-    """ Scrape search results page to get list of recipe urls and ids. """
+def get_recipes_list(url, existing_recipes):
+    """ Scrape search results page to get list of recipe urls and numbers. Only return recipes not already existing. """
     browser.get(url)
     soup = BeautifulSoup(browser.page_source, 'lxml')
 
     recipes = []
     for item in soup.find_all('a', {'class': 'c-masonry-item__container'}):
         path = item['href']
-        recipes.append({'url': 'https://www.ricardocuisine.com' + path,
-                        'id': path.split('/')[-1].split('-')[0]})
+        number = path.split('/')[-1].split('-')[0]
+        if number not in existing_recipes:
+            recipes.append({'url': 'https://www.ricardocuisine.com' + path,
+                            'number': number})
 
     return recipes
 
@@ -50,7 +65,6 @@ def get_recipe_info_ricardo(url):
     """ Scrape the webpage of a specific recipe on ricardo website and collect name and list of ingredients. """
     page = requests.get(url)
     soup = BeautifulSoup(page.content, 'lxml')
-    print(url)
     # get recipe name
     name = soup.find('div', {'class': 'recipe-content'}).find('h1').get_text()
     # get ingredients
@@ -65,7 +79,6 @@ def get_recipe_info_radiocan(url):
     """ Scrape the webpage of a specific recipe on radio-canada website and collect name and list of ingredients. """
     page = requests.get(url)
     soup = BeautifulSoup(page.content, 'lxml')
-    print(url)
     # get recipe name
     name = soup.find('div', {'class': 'recipe__heading'}).get_text()
     # get ingredients
@@ -102,27 +115,29 @@ def get_vector(ingredients):
     """ Pass list of ingredients in universal sentence encoder and average resulting vectors. """
     vectors = embed(ingredients).numpy()
     avg = np.mean(vectors, axis=0)
-    return list(avg)
+    return avg.tolist()
 
 
 def main():
     num_pages = find_max_page()
-    print(num_pages)
+    recipes_in_db = [item['number'] for item in collection.find({}, {'number': 1})]
 
     results = []
     for i in range(1, 2):
         url = f"https://www.ricardocuisine.com/recherche?sort=score&searchValue=&content-type=recipe&currentPage={i}"
 
-        recipes = get_recipes_list(url)
+        recipes = get_recipes_list(url, recipes_in_db)
         for recipe in recipes[:4]:
             try:
                 recipe['name'], recipe['ingredients'] = get_recipe_info_ricardo(recipe['url'])
             except:
                 recipe['name'], recipe['ingredients'] = get_recipe_info_radiocan(recipe['url'])
             recipe['vector'] = get_vector(recipe['ingredients'])
+            collection.insert_one(recipe)
         results = results + recipes
 
     print(results)
 
 
-main()
+if __name__ == '__main__':
+    main()
