@@ -28,12 +28,15 @@ chrome_options.add_argument("--disable-gpu")
 chrome_options.add_argument("window-size=1024,768")
 chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--disable-dev-shm-usage")
+chrome_options.add_argument('--log-level=3')
 
 browser = webdriver.Chrome(options=chrome_options)
 
 
 # setup universal sentence encoder
 embed = hub.load("https://tfhub.dev/google/universal-sentence-encoder-multilingual-large/3")
+
+print('Ready to receive calls')
 
 
 def find_max_page():
@@ -123,11 +126,12 @@ def main():
     recipes_in_db = [item['number'] for item in collection.find({}, {'number': 1})]
 
     results = []
-    for i in range(1, 4):
+    for i in range(1, num_pages):
+        print(i)
         url = f"https://www.ricardocuisine.com/recherche?sort=score&searchValue=&content-type=recipe&currentPage={i}"
 
         recipes = get_recipes_list(url, recipes_in_db)
-        for recipe in recipes[:4]:
+        for recipe in recipes:
             try:
                 recipe['name'], recipe['ingredients'] = get_recipe_info_ricardo(recipe['url'])
             except:
@@ -136,7 +140,7 @@ def main():
             collection.insert_one(recipe)
         results = results + recipes
 
-    print(results)
+    print(f'Updated {len(results)} recipes')
 
 
 if __name__ == '__main__':
