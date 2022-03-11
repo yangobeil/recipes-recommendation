@@ -27,7 +27,7 @@ docker build scraping/script -t scraping
 ```
 To run it locally to test run
 ```
-docker run --env-file=.env -p 5000:5000 scraping
+docker run --env-file=.env --rm -p 5000:5000 scraping
 ```
 The `.env` file contains the two environment variables MONGO_USERNAME and MONGO_PASSSWORD used to connect to the MongoDB database.
 
