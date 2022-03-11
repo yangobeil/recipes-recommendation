@@ -1,5 +1,8 @@
 FROM base_image
 
+# Prevent Python from buffering stdout and stderr
+ENV PYTHONUNBUFFERED 1
+
 COPY scraping.py .
 COPY app.py .
 
